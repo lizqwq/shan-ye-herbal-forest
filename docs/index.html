@@ -166,7 +166,7 @@
 </div>
 <script src="./pages-runtime.js"></script>
 <script type="module" src="./src/app.js"></script>
-<script>setTimeout(()=>{if(document.querySelector('[v-cloak]')){const n=document.createElement('div');n.style='position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#ecebdc;color:#45533e;font:18px serif';n.innerHTML='<h1>山野来信</h1><p>页面资源尚未载入，请检查网络后刷新。</p>';document.body.append(n)}},25000);</script>
+<script>const bootWatch=new MutationObserver(()=>{if(!document.querySelector('[v-cloak]')){document.getElementById('boot-notice')?.remove();bootWatch.disconnect();}});bootWatch.observe(document.getElementById('app'),{attributes:true});setTimeout(()=>{if(document.querySelector('[v-cloak]')){const n=document.createElement('div');n.id='boot-notice';n.style='position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#ecebdc;color:#45533e;font:18px serif';n.innerHTML='<h1>山野来信</h1><p>页面资源尚未载入，请检查网络后刷新。</p>';document.body.append(n)}},25000);</script>
 </body>
 </html>
 
