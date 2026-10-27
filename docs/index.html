@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./src/profile.css">
   <link rel="stylesheet" href="./src/interactions.css">
   <link rel="stylesheet" href="./src/declaration.css">
-  <link rel="stylesheet" href="./src/research.css">
+  <link rel="stylesheet" href="./src/research.css"><link rel="stylesheet" href="./src/mobile.css">
 </head>
 <body>
 <div id="app" v-cloak :class="{'is-immersed':immersed}">
@@ -35,7 +35,7 @@
         <button :class="{active:activePage==='world'}" :aria-current="activePage==='world'?'page':undefined" @click="switchPage('world')">我的世界<span v-if="activePage==='world'"></span></button>
         <button :class="{active:activePage==='profile'}" :aria-current="activePage==='profile'?'page':undefined" @click="switchPage('profile')">个人档案<span v-if="activePage==='profile'"></span></button>
       </nav>
-      <div class="header-tools"><button class="tutorial-tool icon-button" aria-label="查看教程" @click="openTutorial"><Icon name="hand"></Icon></button><button class="account-tool" @click="openModal('account')" :aria-label="accountUser?'账号设置':'游客登录与注册'">{{ accountUser?accountUser.username:'游客 · 登录' }}</button>
+      <div class="header-tools"><button class="mobile-landscape" @click="mobileLandscape" aria-label="横屏体验">横屏 ↻</button><button class="tutorial-tool icon-button" aria-label="查看教程" @click="openTutorial"><Icon name="hand"></Icon></button><button class="account-tool" @click="openModal('account')" :aria-label="accountUser?'账号设置':'游客登录与注册'">{{ accountUser?accountUser.username:'游客 · 登录' }}</button>
         <button class="sound-button" :aria-pressed="sound" @click="toggleSound" :aria-label="sound?'关闭场景环境声':'开启场景环境声'"><Icon :name="sound?'sound':'mute'"></Icon><span>{{ soundLabel }}</span><i :class="{on:sound}"></i></button>
         <button v-if="activePage==='potion'||activePage==='world'" class="shared-camera-toggle" @click="cameraStatus==='ready'?stopCamera():connectCamera()">{{ cameraStatus==='ready'?'关闭摄像头':'开启摄像头' }}</button><span class="tool-divider"></span>
         <button class="icon-button fullscreen" aria-label="切换全屏" @click="toggleFullscreen"><Icon name="expand"></Icon></button>
@@ -147,7 +147,7 @@
       <div class="camera-title"><span><i :class="{'live':cameraStatus==='ready'}"></i>{{ keyboard?'键盘漫游':'手势感知' }}</span><span class="camera-tag">{{ cameraStatus==='ready'?'LIVE':'LOCAL' }}</span></div>
       <div class="camera-preview"><video ref="video" muted playsinline autoplay aria-label="仅在本地处理的摄像头预览"></video><div class="camera-placeholder" v-if="cameraStatus!=='ready'"><Icon :name="keyboard?'keyboard':'hand'"></Icon><span>{{ cameraStatus==='loading'?'正在载入手势模型':keyboard?'按住 W / ↑，向前走':'让双手，成为你的向导' }}</span></div><span class="viewfinder top-left"></span><span class="viewfinder top-right"></span><span class="viewfinder bottom-left"></span><span class="viewfinder bottom-right"></span><span class="hand-found" v-if="handPresent && cameraStatus==='ready'"><Icon name="check"></Icon> {{ handCount===2?'双手 · ':'' }}{{ gesture }}</span></div>
       <p class="camera-status" :title="statusText"><span :class="{'status-live':handPresent}"></span>{{ statusText }}</p>
-      <div class="camera-actions"><button v-if="cameraStatus==='ready'" @click="stopCamera" aria-label="手动关闭摄像头">关闭摄像头</button><button v-if="cameraStatus!=='ready' && cameraStatus!=='loading' && cameraStatus!=='requesting'" @click="connectCamera">开启摄像头 <Icon name="arrow"></Icon></button><span v-else>画面仅在本地处理</span><button @click="keyboardMode" :disabled="keyboard" aria-label="切换到键盘操作"><Icon name="keyboard"></Icon></button></div><button v-if="cameraStatus==='error'" class="camera-permission-help" @click="openModal('camera-help')">摄像头被拒绝？查看授权方法 ↗</button>
+      <p class="mobile-camera-tip">手机请横放，手掌完整入镜；微信内识别异常时用系统浏览器打开。</p><div class="camera-actions"><button v-if="cameraStatus!=='loading' && cameraStatus!=='requesting'" @click="restartCamera" aria-label="重新启动手势识别">重新识别</button><button v-if="cameraStatus==='ready'" @click="stopCamera" aria-label="手动关闭摄像头">关闭摄像头</button><button v-if="cameraStatus!=='ready' && cameraStatus!=='loading' && cameraStatus!=='requesting'" @click="connectCamera">开启摄像头 <Icon name="arrow"></Icon></button><span v-else>画面仅在本地处理</span><button @click="keyboardMode" :disabled="keyboard" aria-label="切换到键盘操作"><Icon name="keyboard"></Icon></button></div><button v-if="cameraStatus==='error'" class="camera-permission-help" @click="openModal('camera-help')">摄像头被拒绝？查看授权方法 ↗</button>
     </aside>
 
     <div class="walking-indicator" v-if="immersed && !held && activePage==='forest'"><span :class="{'walking':moving}"></span>{{ moving?(travelSpeed>3.4?'正在奔跑 · ':travelSpeed>2.15?'平滑变速 · ':'正在漫步 · ')+travelSpeed.toFixed(1)+' m/s':keyboard?'循着小径，继续向前':'微微虚握，继续向前' }}<button v-if="keyboard && !ended" class="touch-walk" @pointerdown.prevent="beginWalk" @pointerup="endWalk" @pointercancel="endWalk" @lostpointercapture="endWalk">按住前进</button><span class="key-hint" v-if="keyboard">W / ↑</span></div>
@@ -164,8 +164,7 @@
     </Transition>
   </main>
 </div>
-<script src="./pages-runtime.js"></script>
-<script type="module" src="./src/app.js"></script>
+<script src="./pages-runtime.js"></script><script type="module" src="./src/app.js"></script>
 <script>const bootWatch=new MutationObserver(()=>{if(!document.querySelector('[v-cloak]')){document.getElementById('boot-notice')?.remove();bootWatch.disconnect();}});bootWatch.observe(document.getElementById('app'),{attributes:true});setTimeout(()=>{if(document.querySelector('[v-cloak]')){const n=document.createElement('div');n.id='boot-notice';n.style='position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#ecebdc;color:#45533e;font:18px serif';n.innerHTML='<h1>山野来信</h1><p>页面资源尚未载入，请检查网络后刷新。</p>';document.body.append(n)}},25000);</script>
 </body>
 </html>

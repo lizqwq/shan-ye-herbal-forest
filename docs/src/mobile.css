@@ -1,0 +1,29 @@
+.mobile-landscape,.mobile-camera-tip{display:none}
+@media(pointer:coarse),(max-width:760px){
+ .mobile-landscape{display:block;white-space:nowrap;font-size:11px;padding:8px;border:1px solid #adb99b;border-radius:5px;min-height:36px}
+ .experience{height:100dvh;min-height:0}
+ .header{height:112px;margin:0 4%;padding-top:env(safe-area-inset-top);gap:8px;align-items:flex-start}
+ .brand,.header-tools{margin-top:14px}.brand strong{font-size:18px!important;letter-spacing:2px}.brand small{font-size:5px}.brand-mark{width:30px;height:30px}
+ .header-tools{gap:3px}.header-tools .tutorial-tool{display:none}
+ .header .main-nav{top:auto;bottom:0;height:44px;width:100%;left:0;right:0;transform:none;gap:0;grid-template-columns:repeat(5,minmax(0,1fr))}
+ .header .main-nav button{display:block;font-size:11px;letter-spacing:0;padding:0 2px}.main-nav button.active span{bottom:4px}
+ .content-view{inset:112px 0 0}.nav-gesture-hint{top:118px;font-size:9px;max-width:94%;white-space:normal;text-align:center}
+ .journey-status{top:158px;left:4%;padding:10px 12px;max-width:55%}.journey-status .eyebrow{margin-bottom:8px}.journey-distance strong{font-size:24px}
+ .forest-coordinate{top:195px;right:5%}.exploration-tools{top:155px}
+ .camera-panel{right:4%;bottom:calc(12px + env(safe-area-inset-bottom));width:156px;padding:9px}.camera-preview{height:78px}.camera-preview video{object-fit:contain}
+ .camera-actions{display:flex;flex-wrap:wrap;gap:5px}.camera-actions>button{font-size:10px;min-height:30px}.camera-actions>span{display:none}.camera-status{font-size:9px;line-height:1.6}
+ .mobile-camera-tip{display:block;font-size:9px;line-height:1.5;color:#758268;margin:6px 0}.camera-panel.camera-compact .mobile-camera-tip{display:none}
+ .bottom-bar{left:4%;bottom:calc(20px + env(safe-area-inset-bottom));right:auto}.walking-indicator{bottom:235px;max-width:90%;font-size:10px}
+ .declaration-hero{height:calc(100dvh - 112px);min-height:520px}.declaration-intro{padding-top:65px}.declaration-intro h1{font-size:42px}.declaration-scroll-hint{bottom:22px}
+ .profile-inner{width:92%;padding-top:48px}.profile-heading{flex-wrap:wrap}.profile-heading h1>span{display:block;margin:12px 0}.profile-summary{flex-wrap:wrap;padding:18px}.archive-progress{width:100%;margin:0}.archive-stats{flex-wrap:wrap}
+ .movement-coach{overflow-y:auto;max-height:100dvh}.dialog{max-height:90dvh}.toast-message{top:150px}
+}
+@media(orientation:landscape) and (max-height:600px){
+ .experience{height:100dvh;min-height:0}.header{height:62px;align-items:center;padding:0;margin:0 max(16px,env(safe-area-inset-left));gap:5px}.brand,.header-tools{margin-top:0}.brand small,.brand-mark,.account-tool,.tutorial-tool{display:none}.brand strong{font-size:16px!important}
+ .header .main-nav{top:0;bottom:auto;left:50%;transform:translateX(-50%);width:52%;height:62px}.header .main-nav button{font-size:11px}.header-tools{margin-left:auto}.mobile-landscape{font-size:10px;min-height:30px}
+ .content-view{inset:62px 0 0}.nav-gesture-hint{top:67px;padding:4px 10px;font-size:8px}.journey-status{top:98px;left:3%;padding:8px 10px}.journey-status .eyebrow{display:none}.journey-distance strong{font-size:20px}.forest-coordinate{top:115px;right:3%}.forest-coordinate .compass-ring{display:none}
+ .camera-panel{width:145px;right:3%;bottom:10px}.camera-preview{height:62px}.mobile-camera-tip{display:none}.camera-title{margin-bottom:4px}.camera-status{margin:4px 0;font-size:8px}.camera-actions>button{font-size:9px;min-height:25px}
+ .bottom-bar{bottom:15px;left:3%}.walking-indicator{bottom:22px;left:50%;max-width:42%;font-size:9px;padding:6px 10px}.gesture-strip{display:none}
+ .declaration-hero{min-height:calc(100dvh - 62px);height:calc(100dvh - 62px)}.declaration-intro{padding-top:24px;margin-left:7%}.declaration-intro h1{font-size:30px;line-height:1.3;margin-bottom:9px}.declaration-intro .eyebrow{margin-bottom:12px}.declaration-intro .intro-copy{font-size:10px;line-height:1.7;margin-bottom:10px}.declaration-intro .chapter,.declaration-intro .entry-note{display:none}.declaration-intro .enter-button{padding:9px 16px}.declaration-scroll-hint{bottom:12px;left:60%;font-size:9px;padding:7px 14px}.declaration-scroll-hint b{font-size:18px}
+ .held-unit{top:40%;height:260px;width:65%}.held-art{transform:scale(.7);transform-origin:top left}.herb-note{top:0;max-height:230px;overflow:auto}.toast-message{top:94px}
+}
