@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#e8e8d9">
+  <meta name="description" content="走入一片安静的森林，用手势发现、认识与采集山野草药。一段与草木相遇的沉浸式旅程。">
+  <title>山野来信 — 一草一木，皆有回响</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="stylesheet" href="./src/style.css">
+  <link rel="stylesheet" href="./src/profile.css">
+  <link rel="stylesheet" href="./src/interactions.css">
+  <link rel="stylesheet" href="./src/declaration.css">
+  <link rel="stylesheet" href="./src/research.css">
+</head>
+<body>
+<div id="app" v-cloak :class="{'is-immersed':immersed}">
+  <main class="experience" :class="{'art-study':artStudy,'info-page':activePage!=='forest','declaration-page':activePage==='about','map-bounce':mapBounce,'map-is-open':!!mapMode,'movement-coaching':movementGuide&&activePage==='forest'&&!mapMode&&!inventoryOpen}" aria-label="山野来信，沉浸式草药森林">
+    <div class="scene" v-show="activePage==='forest'" ref="sceneEl" @pointermove="look" @pointerup="centerLook" @pointerleave="centerLook"></div>
+    <div class="forest-cover" v-show="activePage==='forest'" :class="{'cover-away':immersed}" aria-hidden="true"></div>
+    <div class="edge-wash" v-show="activePage==='forest'" aria-hidden="true"></div>
+    <div class="paper-grain" aria-hidden="true"></div>
+
+    <div v-if="!movementGuide&&!mapMode&&!inventoryOpen&&!modal" class="nav-gesture-hint" :class="{'nav-active':navArming}"><Icon name="fist"></Icon><span>上方限定区域 · 握拳后连续左右横扫切页</span><button @click="openTutorial">查看教程</button></div><div aria-hidden="true" class="nav-swipe-zone" :class="{active:navArming}" :style="{'--swipe-progress':navProgress}"><span>←　导航操作区　→</span></div>
+    <div v-if="artStudy" class="art-study-caption"><span>ART DIRECTION · 01</span><h2>{{ studyTitle }}</h2><p>实时探索场景 · 美术风格试样</p></div>
+    <header class="header">
+      <button class="brand" aria-label="山野来信首页" @click="switchPage('about')">
+        <span class="brand-mark"><Icon name="leaf"></Icon></span>
+        <span><strong>山野来信</strong><small>LETTERS FROM THE WILD</small></span>
+      </button>
+      <nav aria-label="首页导航" class="main-nav">
+        <button :class="{active:activePage==='about'}" :aria-current="activePage==='about'?'page':undefined" @click="switchPage('about')">关于山野<span v-if="activePage==='about'"></span></button>
+        <button :class="{active:activePage==='forest'}" :aria-current="activePage==='forest'?'page':undefined" @click="enter">秘境漫游<span v-if="activePage==='forest'"></span></button>
+        <button :class="{active:activePage==='potion'}" :aria-current="activePage==='potion'?'page':undefined" @click="switchPage('potion')">药水制作<span v-if="activePage==='potion'"></span></button>
+        <button :class="{active:activePage==='world'}" :aria-current="activePage==='world'?'page':undefined" @click="switchPage('world')">我的世界<span v-if="activePage==='world'"></span></button>
+        <button :class="{active:activePage==='profile'}" :aria-current="activePage==='profile'?'page':undefined" @click="switchPage('profile')">个人档案<span v-if="activePage==='profile'"></span></button>
+      </nav>
+      <div class="header-tools"><button class="tutorial-tool icon-button" aria-label="查看教程" @click="openTutorial"><Icon name="hand"></Icon></button><button class="account-tool" @click="openModal('account')" :aria-label="accountUser?'账号设置':'游客登录与注册'">{{ accountUser?accountUser.username:'游客 · 登录' }}</button>
+        <button class="sound-button" :aria-pressed="sound" @click="toggleSound" :aria-label="sound?'关闭场景环境声':'开启场景环境声'"><Icon :name="sound?'sound':'mute'"></Icon><span>{{ soundLabel }}</span><i :class="{on:sound}"></i></button>
+        <button v-if="activePage==='potion'||activePage==='world'" class="shared-camera-toggle" @click="cameraStatus==='ready'?stopCamera():connectCamera()">{{ cameraStatus==='ready'?'关闭摄像头':'开启摄像头' }}</button><span class="tool-divider"></span>
+        <button class="icon-button fullscreen" aria-label="切换全屏" @click="toggleFullscreen"><Icon name="expand"></Icon></button>
+      </div>
+    </header>
+
+    <button v-if="activePage==='forest'" class="gesture-help" aria-label="手势指引" @click="openTutorial"><Icon name="hand"></Icon><span>手势指引</span></button>
+    <button v-if="activePage==='forest'" class="gesture-help map-help" aria-label="打开小地图" @click="openMap('mini')"><span class="map-help-symbol">⌖</span><span>林间地图</span></button>
+    <div v-if="inventoryOpen" class="inventory-shade" @click="closeInventory"></div>
+
+    <section v-show="activePage==='profile' || inventoryOpen" ref="profileScroll" class="content-view profile-page" :class="{'inventory-panel':inventoryOpen}" :role="inventoryOpen?'dialog':undefined" :aria-modal="inventoryOpen?true:undefined" :aria-label="inventoryOpen?'草药背包图鉴':'个人档案'" tabindex="0">
+      <button v-if="inventoryOpen" class="icon-button inventory-close" aria-label="关闭背包" @click="closeInventory"><Icon name="close"></Icon></button>
+      <p v-if="inventoryOpen" class="inventory-instructions">本次背包 · 双手从两侧向中间合掌关闭。张手后握拳拿起草药，再张手丢弃一株。</p>
+      <div class="codex-filters" v-html="CODEX_FILTERS"></div>
+      <div class="profile-inner">
+        <div class="profile-heading"><div><p class="eyebrow"><span></span> {{ inventoryOpen?'THIS EXPEDITION · BACKPACK':'MY BOTANICAL ARCHIVE' }}</p><h1>{{ inventoryOpen?'本次行动背包':'个人档案' }}<span>{{ inventoryOpen?'切换页面时，草药自动存入仓库。':'草木之间，留下你的足迹。' }}</span></h1></div><button class="archive-roam" @click="enter">再赴山野 <Icon name="arrow"></Icon></button></div>
+        <div class="profile-summary"><div class="archive-seal"><Icon name="leaf"></Icon></div><div class="archive-identity"><span>山野采药人</span><p>每一次相逢，都值得被记住。</p><small>{{ inventoryOpen?'仅显示本次采集，关闭面板仍保留':accountUser?'仓库档案与账号同步':'仓库档案保存在当前浏览器' }}</small></div><div class="archive-progress"><span>草木收集度 <b>{{ profileStats.percent }}%</b></span><div><i :style="{width:profileStats.percent+'%'}"></i></div><small>{{ profileStats.got }} / {{ profileStats.total }} 种草药已收录</small></div></div>
+        <div class="archive-stats" id="statbar"><div><span>图鉴草药</span><strong>{{ profileStats.total }}<small>种</small></strong></div><div><span>已收录</span><strong>{{ profileStats.got }}<small>种</small></strong></div><div><span>少见草木</span><strong>{{ profileStats.rare }}<small>种</small></strong></div><div><span>稀有草木</span><strong>{{ profileStats.legend }}<small>种</small></strong></div><div><span>{{ inventoryOpen?'背包草药':'累计采集' }}</span><strong>{{ profileStats.sum }}<small>株</small></strong></div></div>
+        <div class="codex-section-heading"><div><span class="section-index">01 /</span><h2>{{ inventoryOpen?'随行草药':'草药图鉴' }}</h2></div><label class="codex-search"><span>⌕</span><input v-model="search" type="search" aria-label="搜索草药名称、学名或生境" placeholder="寻找一株草木…"></label></div>
+        <div class="region-filter" role="group" aria-label="地区筛选"><button v-for="place in ['全部地区','亚洲','欧洲','非洲']" :key="place" :class="{selected:region===place}" :aria-pressed="region===place" @click="region=place">{{ place }}</button></div><div class="codex-categories" id="tabs" role="group" aria-label="草药分类"><button v-for="cat in CATEGORIES" :key="cat" :class="{selected:category===cat}" :aria-pressed="category===cat" @click="category=cat">{{ cat }}<small>{{ cat==='全部'?displayRecords.length:displayRecords.filter(h=>h.cat===cat).length }}</small></button></div>
+        <p v-if="!inventoryOpen" class="codex-grade-note">本游戏的药材等级以物种分布范围与观测信息为参考进行游戏化设定，仅用于表示探索中的相对出现频率，不代表现实中的濒危等级或保护等级。</p>
+        <p class="codex-result">共 {{ filteredRecords.length }} 份草木档案 <span>点击卡片，读一封来自山野的信</span></p>
+        <div class="codex-grid" id="dex" v-show="filteredRecords.length"><button v-for="item in filteredRecords" :key="item.id" :data-herb-id="item.id" class="codex-card" :class="['quality-'+item.r,{locked:inventoryOpen?item.own===0:!item.collected,'card-grabbed':inventoryHeld?.id===item.id,'hand-hover':handCardHover===item.id}]" @click="showRecord(item)" :aria-label="'查看'+item.n+'档案'"><span class="codex-number">NO. {{ String(item.id).padStart(3,'0') }}</span><span class="codex-count">{{ item.own?'× '+item.own:item.collected?'库存 0':'未采集' }}</span><div class="codex-art" v-html="recordArt(item)"></div><h3>{{ item.n }}</h3><p class="codex-latin">{{ item.l }}</p><div class="codex-card-bottom"><span :class="'rarity rarity-'+item.r">{{ item.r===1?'✦ 常见':item.r===2?'✦✦ 少见':'✦✦✦ 稀有' }}</span><small>{{ item.cat }}</small></div></button></div>
+        <div class="codex-empty" v-if="!filteredRecords.length"><Icon name="leaf"></Icon><h3>{{ inventoryOpen?'本次背包还没有草药':'还没有找到这株草木' }}</h3><p>{{ inventoryOpen?'沿小径采集草药，切换页面后自动存入仓库。':'试试其他名字，或回到全部分类。' }}</p><button @click="search='';category='全部'">查看全部草药</button></div>
+        <div v-if="!inventoryOpen" class="codex-coming-soon"><h2>敬请期待</h2></div><p class="archive-end">山川不言，草木有信。<span>食指指上向上翻阅 · 指下向下翻阅</span></p>
+      </div>
+    </section>
+
+    <section v-show="activePage==='about'" ref="aboutScroll" class="content-view about-page declaration-scroll" aria-label="关于山野" tabindex="0">
+      <div class="declaration-hero"><div class="declaration-intro"><p class="eyebrow"><span></span> 以手为引，与自然相逢</p><h1>一草一木，<br>皆有<span class="title-accent">回响。</span></h1><p class="intro-copy">暂别喧嚣，走进一片会呼吸的山林。<br>伸出手，拾起藏在草木间的东方智慧。</p><button class="enter-button" @click="enter"><span>走入山野</span><Icon name="arrow"></Icon></button><p class="entry-note"><span class="tiny-dot"></span> 无需手柄，你的双手就是向导</p><div class="chapter"><span>01</span><i></i><div>山林初见<small>THE FIRST ENCOUNTER</small></div></div></div><button class="declaration-scroll-hint" @click="scrollToAbout" aria-label="向下阅读关于山野"><span>向下翻阅 · 关于山野</span><b>↓</b></button></div><div class="declaration-copy"><div class="about-inner"><p class="eyebrow"><span></span> A LITTLE CLOSER TO NATURE</p><h1>山川不言，<br>草木有信。</h1><p class="about-lead">一段放慢脚步的旅程，一次与草木重逢的邀请。</p><div class="about-landscape" role="img" aria-label="纸感插画森林与蜿蜒山路"></div><div class="about-story"><span>01 / 缘起</span><div><h2>给忙碌生活，留一片山林。</h2><p>我们习惯了匆匆走过，却很少低头看见路边的一株草。山野来信邀请你成为现代采药人，沿着蜿蜒的小径，认识那些一直生长在我们身边的植物。</p><p>在这里，没有倒计时。你可以前行，可以停步，也可以将一株草木托在掌心，读懂它的名字、形态与传统本草故事。</p></div></div><div class="about-story"><span>02 / 相逢</span><div><h2>用双手，建立一份自己的草木档案。</h2><p>在秘境漫游中，单手微微虚握前伸，沿林间小路向前。遇到草药时，先张开手掌，再握拳拾取。保持握拳向下移动，便能收入行囊，切换页面时再存入个人档案仓库。</p><p>你在同一浏览器中采集的新记录会被保留。图鉴既记载已经相逢的草木，也收藏那些等待未来探索的线索。</p></div></div><div class="about-story"><span>03 / 守护</span><div><h2>认识自然，也尊重自然。</h2><p>现实中的植物可能有相似外形或毒性。请勿仅凭图鉴辨认后自行采食、制药或外敷；不随意采摘珍稀植物，不打扰它们原本的生境。</p><div class="knowledge-note"><Icon name="info"></Icon><p>草药文字用于传统本草文化科普，不能替代专业诊断、治疗或用药建议。</p></div></div></div><div class="about-story"><span>04 / 隐私</span><div><h2>你的双手，只与此刻的山林对话。</h2><p>摄像头用于设备本地的手势识别，画面不上传、不保存。你可以随时手动关闭摄像头；游客的进度保存在当前浏览器；登录账号后，进度与账号存档同步。</p><p>左右切页：在屏幕上方限定导航区域内，单手握拳后，连续左右横扫约三分之一屏幕。食指指上向上滚动，指下向下滚动，收回停止；所有可滚动页面与弹窗均可使用。</p></div></div><button class="dialog-primary" @click="enter">再赴山野 <Icon name="arrow"></Icon></button><p class="archive-end">让每一次停步，都成为与自然的相逢。</p><p class="gesture-report-link"><a href="./reports/gesture-audit.json" target="_blank" rel="noopener">查看手势交互检测报告 ↗</a></p><div v-html="RESEARCH_HTML"></div><div class="world-entry"><p class="eyebrow"><span></span> MY WORLD</p><h2>我的世界</h2><button class="enter-button" @click="switchPage('world')"><span>进入世界</span><Icon name="arrow"></Icon></button><button class="world-entry-link" @click="switchPage('world')">探索世界 ↗</button></div></div></div>
+    </section>
+
+    <section v-if="activePage==='potion'" class="potion-page workshop-page content-view" aria-label="药水制作"><iframe v-if="workshopActive" ref="workshopFrame" @load="onWorkshopLoad" src="./workshop/herb-observation.html?sharedCamera=1" title="草木观察室 · 药水制作" allow="camera; fullscreen" referrerpolicy="same-origin"></iframe></section>
+    <section v-if="activePage==='world'" class="content-view my-world-page" aria-label="我的世界"><iframe ref="worldFrame" @load="onWorldLoad" src="./earth/index.html?sharedCamera=1" title="我的世界 · 手势地球" allow="camera; fullscreen"></iframe></section>
+
+    <Transition name="intro">
+      <section v-if="!immersed && activePage==='forest'" class="introduction">
+        <p class="eyebrow"><span></span> 以手为引，与自然相逢</p>
+        <h1>一草一木，<br>皆有<span class="title-accent">回响。</span></h1>
+        <p class="intro-copy">暂别喧嚣，走进一片会呼吸的山林。<br>伸出手，拾起藏在草木间的东方智慧。</p>
+        <button class="enter-button" @click="enter"><span>走入山野</span><Icon name="arrow"></Icon></button>
+        <p class="entry-note"><span class="tiny-dot"></span> 无需手柄，你的双手就是向导</p>
+        <div class="chapter"><span>01</span><i></i><div>山林初见<small>THE FIRST ENCOUNTER</small></div></div>
+      </section>
+    </Transition>
+
+    <Transition name="fade">
+      <div v-if="immersed && !held && activePage==='forest'" class="journey-status">
+        <p class="eyebrow"><span></span> {{ ended?'小径尽头，山野长留':moving?'循着草木，慢慢向前':'在此停步，听一听山林' }}</p>
+        <p class="journey-distance"><strong>{{ distance.toFixed(1) }}</strong><span>米 · 山野足迹</span></p>
+        <button class="back-to-intro" @click="switchPage('about')">← 回到关于山野</button>
+      </div>
+    </Transition>
+
+    <aside v-show="activePage==='forest'" class="forest-coordinate" aria-label="森林环境">
+      <div class="compass"><span>N</span><div class="compass-ring"><i></i><b></b></div><small>{{ currentRegion }}</small></div>
+      <p><Icon name="sun"></Icon> 薄雾微光 <span> · </span> 宜漫游</p>
+    </aside>
+
+    <canvas ref="handCanvas" class="hand-layer" :class="{'hand-layer-raised':inventoryOpen || mapMode}" aria-hidden="true"></canvas>
+
+    <Transition name="coach"><div v-if="movementGuide && !mapMode && !inventoryOpen" class="movement-coach-layer"><div class="movement-coach-veil"></div><aside class="movement-coach" role="note" aria-label="首次移动手势引导"><p class="eyebrow"><span></span> YOUR FIRST STEPS</p><div class="coach-art" :class="'tutorial-demo-'+currentTutorial.art"><div v-if="currentTutorial.art==='navigation'" class="tutorial-nav-demo"><span>上方 8%—32% 限定区域</span><Icon name="fist"></Icon><i>↔</i></div><div v-else-if="currentTutorial.art==='scroll'" class="tutorial-point-demo"><Icon name="point"></Icon><span>↑　↓</span></div><div v-else-if="currentTutorial.art==='grab'" class="tutorial-grab-demo"><Icon name="hand"></Icon><Icon name="fist"></Icon><span>张掌停步 → 握拳采集</span></div><div v-else class="coach-pair"><Icon :name="currentTutorial.art==='bag'?'hand':'fist'"></Icon><Icon :name="currentTutorial.art==='bag'?'hand':'fist'"></Icon><span>↔</span></div></div><h2>{{ currentTutorial.title }}</h2><p>{{ currentTutorial.text }}</p><div v-if="currentTutorial.art==='move'" class="coach-speeds"><span>单手虚握 <b>2 m/s</b></span><i>↔</i><span>双手虚握 <b>4 m/s</b></span></div><div class="tutorial-confirm-hands"><span class="tutorial-palms"><Icon name="hand"></Icon><Icon name="hand"></Icon></span><span class="tutorial-fists"><Icon name="fist"></Icon><Icon name="fist"></Icon></span></div><p class="tutorial-confirm-copy">{{ tutorialStep===tutorialSteps.length-1?'双手张掌，再同时握拳确认结束':'双手张掌，再同时握拳查看下一项' }}</p><div class="tutorial-progress"><i v-for="(_,index) in tutorialSteps" :key="index" :class="{active:index===tutorialStep}"></i><span>{{ tutorialStep+1 }} / {{ tutorialSteps.length }}</span></div><button class="tutorial-understood" @click="advanceTutorial">{{ tutorialStep===tutorialSteps.length-1?'我已了解':'下一项' }} <span>↗</span></button><button v-if="tutorialStep<tutorialSteps.length-1" class="tutorial-skip-all" @click="dismissMovementGuide">跳过教程</button><svg class="coach-leader" viewBox="0 0 200 80" aria-hidden="true"><path d="M0 64Q70 65 100 36T185 24" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="3 5"></path><circle cx="185" cy="24" r="7" fill="none" stroke="currentColor"></circle></svg></aside></div></Transition>
+    <div v-if="mapMode" class="map-scrim" @click="closeMap"></div>
+    <aside v-if="mapMode" class="exploration-orbs" aria-label="探索入口"><div v-for="choice in exploreChoices" :key="choice.key" class="exploration-choice"><button class="explore-orb" :data-mode="choice.key" :class="{'hand-hover':hoveredExploreMode===choice.key}" @click="travelToPoint(choice.key)" :aria-label="choice.label"><span>↗</span><strong>{{ choice.label }}</strong></button><p>{{ choice.description }}</p><small>{{ choice.length }}</small></div></aside>
+      <div v-if="mapMode" class="map-wheel" :class="{grabbing:wheelDragging}" @wheel.prevent="turnMap(Math.sign($event.deltaX || $event.deltaY))" @pointerdown="wheelPointerDown" @pointermove="wheelPointerMove" @pointerup="wheelPointerUp" @pointercancel="wheelPointerUp" aria-label="循环地图滚轮">
+        <button aria-label="上一张地图" class="wheel-arrow" @click="turnMap(-1)">←</button>
+        <div class="wheel-slots" :style="{'--wheel-offset':wheelOffset}"><button v-for="slot in slots" :key="slot.number" class="wheel-slot" :data-number="slot.number" :style="{left:(50+(slot.offset+wheelOffset)*20)+'%'}" :class="{current:slot.offset===0,adjacent:Math.abs(slot.offset)===1,outer:Math.abs(slot.offset)===2,grabbed:wheelDragging&&grabbedDigit===slot.number,'hand-hover':hoveredDigit===slot.number&&!wheelDragging}" :aria-label="slot.offset===0?'确认选择地图'+slot.number:'预览地图'+slot.number" :aria-current="slot.offset===0?'true':undefined" @click="slot.offset===0?confirmMap():turnMap(slot.offset)"><span class="wheel-number">{{ slot.number }}</span><small v-if="wheelDragging&&grabbedDigit===slot.number" class="grabbed-caption">已抓取</small></button></div>
+        <button aria-label="下一张地图" class="wheel-arrow" @click="turnMap(1)">→</button>
+      </div>
+      <p v-if="mapMode" class="map-wheel-hint">张掌 → 握拳 → 张掌：原地选中居中；左右拖动后张掌：惯性停靠</p>
+    <aside v-if="mapMode" class="map-floating-guide" aria-label="地图动态手势指引"><p class="eyebrow">LET YOUR HANDS LEAD</p><article><div class="animated-hand-demo"><Icon name="hand" class="demo-open"></Icon><Icon name="fist" class="demo-fist"></Icon><span class="demo-drag-trail"></span></div><h4>张掌，握住一个数字</h4><p>保持握拳左右拖动<br>原地张掌确认选择，拖动后张掌停靠</p></article><article><div class="animated-confirm-demo"><span class="demo-orb"></span><Icon name="hand" class="confirm-open"></Icon><Icon name="fist" class="confirm-fist"></Icon></div><h4>选择圆窗，开始探索</h4><p>右上固定探索，右下随机探索<br>张掌对准，再握拳确认出发</p></article><article class="map-scroll-guide"><div class="scroll-finger-demo">☝<span>↕</span></div><h4>指上向上，指下向下</h4><p>食指指下向下、指上向上；也可用鼠标滚轮<br>收回食指即停止，查看全部小地图</p></article></aside>
+    <section v-if="mapMode" class="map-panel map-picker world-selector" role="dialog" aria-modal="true" aria-label="地图选择" tabindex="0">
+      <button class="icon-button map-close" aria-label="关闭地图" @click="closeMap"><Icon name="close"></Icon></button>
+      <p class="eyebrow"><span></span> FIVE LANDSCAPES · ONE JOURNEY</p><h2>下一程，去哪里？</h2>
+
+      <div class="map-title-row"><div><p class="eyebrow">{{ String(mapIndex+1).padStart(2,'0') }} / THE LANDSCAPE</p><h3>{{ selectedMap.name }}</h3><p>{{ selectedMap.subtitle }}</p></div><span class="selected-stamp">{{ confirmedMapIndex===mapIndex?'已选地图':'预览中' }}</span></div>
+      <div v-if="mapMode" ref="previewEl" class="preview-capture-host" aria-hidden="true"></div>
+      <div class="submap-gallery"><figure v-for="(place,index) in submaps" :key="mapIndex+'-'+index"><div class="submap-image"><img v-if="submapImages[index]" :src="submapImages[index]" :alt="place.name+'地貌预览'"><span v-else>正在展开山野…</span></div><figcaption><h4>{{ place.name }}</h4><p>{{ selectedMap.name }} · 随机轮换 · 每轮只走一遍</p><div class="submap-flora"><span v-for="tier in RARITY_GROUPS" :key="tier.key"><b>{{ tier.label }}</b> {{ floraFor(mapIndex,index,selectedMap)[tier.key].join(' · ') }}</span></div><p class="submap-wildlife">可观察动物：{{ wildlifeFor(mapIndex,index).map(a=>a.name).join(' · ') }}</p></figcaption></figure></div>
+      <div class="map-herb-groups"><article v-for="tier in RARITY_GROUPS" :key="tier.key" :class="'tier-'+tier.key"><h4>{{ tier.label }}<small>{{ selectedMap[tier.key].length }}种</small></h4><p>{{ selectedMap[tier.key].join(' · ') }}</p><small>{{ tier.key==='legend'?'100—150米：上限必刷':tier.key==='scarce'?'50—100米：上限必刷':'5—10米：上限必刷' }}</small></article></div>
+      <p class="map-gesture-note">小地图仅供预览，不可点选跳转 · 每轮随机且不重复<br>双拳合拢后分开打开地图，双拳由两侧合拢关闭</p>
+    </section>
+
+    <aside v-if="inventoryHeld" class="inventory-held" :style="holdStyle" aria-label="背包中拿起的草药"><div v-html="recordArt(inventoryHeld)"></div><img src="./ui/hand_hold.png" alt="托举手"><p>{{ inventoryHeld.n }} · 1 株</p><small>张掌丢弃，或关闭背包原样放回</small><button @click="inventoryDrop">丢弃这一株 <kbd>X</kbd></button></aside>
+
+    <Transition name="fade">
+      <button v-if="immersed && nearest && !held && activePage==='forest'" class="herb-target" :style="targetStyle" @click="collectNearest" :aria-label="'采集'+nearest.herb.name">
+        <span class="target-ring"><span>＋</span></span>
+        <span class="target-caption"><strong>{{ nearest.herb.name }}</strong><small>{{ nearest.distance.toFixed(1) }} m · 张手后握拳采集 <kbd>E</kbd></small></span>
+      </button>
+    </Transition>
+
+    <Transition name="hold">
+      <section v-if="held" class="held-unit" :class="{'discarding':holdingExit}" :style="holdStyle" aria-label="持有草药展示" aria-live="polite">
+        <div class="held-art"><img class="held-herb" :src="herbImage(held)" :alt="held.name"><span class="herb-halo"></span><img class="holding-hand" src="./ui/hand_hold.png" alt="插画托举手"></div>
+        <article class="herb-note"><span class="specimen-label">山 野 拾 记 <span> / {{ held.rarity }}</span></span><h2>{{ held.name }}</h2><p class="latin">{{ held.latin }}</p><div class="note-rule"></div><p class="herb-description">{{ held.text }}</p><p class="holding-hint">握拳下移 · 收入行囊<br>张开手掌 · 告别草木</p><div class="hold-actions"><button @click="store"><Icon name="bag"></Icon> 存入 <kbd>B</kbd></button><button @click="discard">放回 <kbd>X</kbd></button></div></article>
+      </section>
+    </Transition>
+
+    <div class="scene-caption" v-if="!immersed && activePage==='forest'"><span class="caption-line"></span><p>山川不言，草木有信。<small>A LITTLE CLOSER TO NATURE.</small></p></div>
+
+    <footer v-show="activePage==='forest'" class="bottom-bar">
+      <div class="bag-panel" role="button" tabindex="0" @click="openInventory" @keydown.enter="openInventory" :class="{'bag-flash':flash}" aria-label="背包容量" aria-live="polite"><span class="bag-icon"><Icon name="bag"></Icon><i v-if="flash">＋1</i></span><div><span class="bag-label">采药行囊</span><p><strong>{{ bagSpecies }}</strong><span> / 30 种</span></p></div><span class="bag-divider"></span><small>把相遇<br>收进行囊</small></div>
+      <div class="gesture-strip"><span class="gesture-step"><Icon name="point"></Icon><span><b>微微虚握</b><small>沿小径漫步</small></span></span><i></i><span class="gesture-step"><Icon name="fist"></Icon><span><b>张手 · 握拳</b><small>拾起一株草木</small></span></span><i></i><button class="guide-shortcut" @click="openModal('guide')" aria-label="查看完整手势指引">?</button></div>
+      <button class="mobile-guide" @click="openModal('guide')"><Icon name="hand"></Icon> 手势指引</button>
+    </footer>
+
+    <Transition name="fade"><aside v-if="animalInfo && activePage==='forest' && !mapMode && !inventoryOpen && !modal" class="animal-note" aria-live="polite"><span>林间相逢 · 动物观察</span><h3>{{ animalInfo.name }}</h3><em>{{ animalInfo.latin }}</em><p>{{ animalInfo.desc }}</p><small>移开手掌即可收起</small></aside></Transition>
+    <aside v-show="activePage!=='potion' && activePage!=='world'" class="camera-panel" :class="{'camera-connected':cameraStatus==='ready','camera-compact':activePage!=='forest'}" aria-label="摄像头与手势状态">
+      <div class="camera-title"><span><i :class="{'live':cameraStatus==='ready'}"></i>{{ keyboard?'键盘漫游':'手势感知' }}</span><span class="camera-tag">{{ cameraStatus==='ready'?'LIVE':'LOCAL' }}</span></div>
+      <div class="camera-preview"><video ref="video" muted playsinline autoplay aria-label="仅在本地处理的摄像头预览"></video><div class="camera-placeholder" v-if="cameraStatus!=='ready'"><Icon :name="keyboard?'keyboard':'hand'"></Icon><span>{{ cameraStatus==='loading'?'正在载入手势模型':keyboard?'按住 W / ↑，向前走':'让双手，成为你的向导' }}</span></div><span class="viewfinder top-left"></span><span class="viewfinder top-right"></span><span class="viewfinder bottom-left"></span><span class="viewfinder bottom-right"></span><span class="hand-found" v-if="handPresent && cameraStatus==='ready'"><Icon name="check"></Icon> {{ handCount===2?'双手 · ':'' }}{{ gesture }}</span></div>
+      <p class="camera-status" :title="statusText"><span :class="{'status-live':handPresent}"></span>{{ statusText }}</p>
+      <div class="camera-actions"><button v-if="cameraStatus==='ready'" @click="stopCamera" aria-label="手动关闭摄像头">关闭摄像头</button><button v-if="cameraStatus!=='ready' && cameraStatus!=='loading' && cameraStatus!=='requesting'" @click="connectCamera">开启摄像头 <Icon name="arrow"></Icon></button><span v-else>画面仅在本地处理</span><button @click="keyboardMode" :disabled="keyboard" aria-label="切换到键盘操作"><Icon name="keyboard"></Icon></button></div><button v-if="cameraStatus==='error'" class="camera-permission-help" @click="openModal('camera-help')">摄像头被拒绝？查看授权方法 ↗</button>
+    </aside>
+
+    <div class="walking-indicator" v-if="immersed && !held && activePage==='forest'"><span :class="{'walking':moving}"></span>{{ moving?(travelSpeed>3.4?'正在奔跑 · ':travelSpeed>2.15?'平滑变速 · ':'正在漫步 · ')+travelSpeed.toFixed(1)+' m/s':keyboard?'循着小径，继续向前':'微微虚握，继续向前' }}<button v-if="keyboard && !ended" class="touch-walk" @pointerdown.prevent="beginWalk" @pointerup="endWalk" @pointercancel="endWalk" @lostpointercapture="endWalk">按住前进</button><span class="key-hint" v-if="keyboard">W / ↑</span></div>
+    <Transition name="toast"><div class="toast-message" role="status" v-if="toast"><Icon name="leaf"></Icon>{{ toast }}</div></Transition>
+
+    <Transition name="fade">
+      <div v-show="modal" id="mask" class="modal-backdrop" @click.self="closeModal">
+        <section class="dialog" :class="{'record-dialog':modal==='record'}" role="dialog" aria-modal="true" :aria-labelledby="modal==='account'?'account-title':modal==='guide'?'guide-title':modal==='record'?'record-title':modal==='camera-help'?'camera-help-title':'about-title'">
+          <button class="icon-button dialog-close" aria-label="关闭弹窗" @click="closeModal"><Icon name="close"></Icon></button>
+          <template v-if="modal==='account'"><p class="eyebrow"><span></span> YOUR OWN JOURNEY</p><h2 id="account-title">{{ accountUser?'我的账号':accountMode==='register'?'留住你的山野足迹':'回到自己的山野' }}</h2><p>{{ accountMessage }}</p><template v-if="accountUser"><p>当前账号：{{ accountUser.username }}</p><button class="dialog-primary" :disabled="accountBusy" @click="logoutAccount">退出账号，返回游客</button></template><form v-else @submit.prevent="submitAccount" class="account-form"><label>用户名<input v-model="accountName" name="username" autocomplete="username" minlength="2" maxlength="32" required></label><label>密码<input v-model="accountPassword" name="password" type="password" :autocomplete="accountMode==='register'?'new-password':'current-password'" minlength="8" maxlength="128" required></label><p>{{ accountMode==='register'?'注册会自动继承当前游客的草药、教程与探索进度。':'登录后读取账号存档；游客进度仍保留在此浏览器。' }}</p><button type="submit" class="dialog-primary" :disabled="accountBusy">{{ accountBusy?'正在处理…':accountMode==='register'?'注册并继承进度':'登录' }}</button><button type="button" @click="accountMode=accountMode==='login'?'register':'login';accountError=''">{{ accountMode==='login'?'创建账号':'已有账号，去登录' }}</button></form><p class="account-error" role="alert">{{ accountError }}</p></template><template v-if="modal==='guide'"><p class="eyebrow"><span></span> YOUR HANDS, YOUR GUIDE</p><h2 id="guide-title">以手为引，走入山野。</h2><p class="dialog-intro">单手虚握前伸步行，双手同时虚握前伸加速。摊掌立即停步。地图与背包有各自独立的双手动作。</p><div class="guide-grid"><article><span class="guide-number">01</span><Icon name="point"></Icon><h3>循径而行</h3><p>单手微微虚握前伸，稳定0.3秒后步行2m/s；双手同时虚握前伸，平滑加速至4m/s；恢复单手虚握后延时减速。摊掌立即停步，紧握拳仅用于抓取。</p></article><article><span class="guide-number">02</span><Icon name="fist"></Icon><h3>拾起草木</h3><p>靠近草药，摊掌停步；手心对准植株，放大高亮会持续保持，再紧握拾取。命中外壳已放宽，保持握拳下移即可存入。</p></article><article><span class="guide-number">03</span><Icon name="bag"></Icon><h3>收入行囊</h3><p>持有时保持握拳向下移动。松拳张手，则告别草木。</p></article></div><div class="page-gesture-guide"><article><span class="gesture-demo">←　✊　→</span><h3>左右切页</h3><p>仅在屏幕上方8%—32%限定区域，单手握拳后连续左右横扫约三分之一屏幕，无需在两端停稳。五个导航页均可切换；持物、采集、弹窗与拖动时不切页。</p></article><article><span class="gesture-demo">↑　☝　↓</span><h3>食指方向滚动</h3><p>食指指上向上滚，指下向下滚；保持指向至少0.25秒后持续滚动，收回或横指停止；仅可滚动页面生效。</p></article></div><div class="page-gesture-guide"><article><span class="gesture-demo">🤲 → 👐</span><h3>双手打开背包</h3><p>双手张掌先合拢，再向两侧张开，打开背包；双掌从两侧向中间合拢，关闭背包。背包仅含本次采集，切页后存入仓库。对准卡片张手再握拳拿取，再张手丢弃。</p></article><article><span class="gesture-demo">→ 🙏 ←</span><h3>双拳开关地图</h3><p>双手握拳，双拳靠拢后向外分开打开地图；双拳从两侧向中间合拢关闭地图。张掌对准数字后握拳抓住滚轮，保持握拳左右拖动，松手后惯性停靠；对准右侧圆窗张掌再握拳，从起点探索。</p></article></div><div class="keyboard-guide"><Icon name="keyboard"></Icon><span>也可轻松体验</span><span><kbd>W / ↑</kbd> 前进</span><span><kbd>E</kbd> 采集</span><span><kbd>B</kbd> 存入</span><span><kbd>X</kbd> 放回</span></div><p class="privacy-note">摄像头画面仅用于当前设备上的手势识别，不上传、不保存。</p><button class="dialog-primary" @click="closeModal(); enter()">我准备好了 <Icon name="arrow"></Icon></button></template>
+          <template v-else-if="modal==='camera-help'"><p class="eyebrow"><span></span> CAMERA PERMISSION</p><h2 id="camera-help-title">重新连接你的双手。</h2><div class="camera-help-copy"><p>如果之前点击过“拒绝”，网页无法自行改回权限，需要你在浏览器中重新允许。</p><ol><li>Chrome / Edge：点击地址栏左侧的站点信息图标，进入站点权限，将“摄像头”改为“允许”。</li><li>返回本页，刷新后再次点击“开启摄像头”。</li><li>如果内置浏览器没有权限入口，用 Chrome 或 Edge 打开当前网址。</li><li>仍无法连接时，在 Windows“设置 → 隐私和安全性 → 摄像头”中允许桌面应用使用摄像头，并检查摄像头是否被其他软件占用。</li></ol><p>本页识别在本机进行，视频不上传、不保存。</p><a href="https://support.google.com/chrome/answer/2693767?hl=zh-Hans" target="_blank" rel="noopener noreferrer">查看 Chrome 官方权限说明 ↗</a></div><button class="dialog-primary" @click="closeModal();connectCamera()">我已允许，重新连接 <Icon name="camera"></Icon></button></template><template v-else-if="modal==='record' && record"><p class="eyebrow"><span></span> BOTANICAL LETTER · {{ String(record.id).padStart(3,'0') }}</p><div class="record-art" :class="{uncollected:!(record.collected||record.own)}" v-html="recordArt(record)"></div><span :class="'rarity rarity-'+record.r">{{ record.r===1?'✦ 常见':record.r===2?'✦✦ 少见':'✦✦✦ 稀有' }}</span><h2 id="record-title">{{ record.n }}</h2><p class="record-latin">{{ record.english?record.english+' · '+record.l:record.l }}</p><p class="record-description">{{ record.desc }}</p><div class="record-properties"><span>传统本草记载</span><p>{{ record.props }}</p></div><div class="record-meta"><span>{{ record.cat }} · {{ record.sc }}</span><span>{{ '仓库数量 '+record.own+' 株' }}</span></div><p class="record-disclaimer">本草文化科普，仅供认识植物，不作为用药建议。</p><button v-if="inventoryOpen && record.own" class="dialog-primary" @click="takeInventoryRecord(record)">从背包拿起一株</button><button v-else class="dialog-primary" @click="goCollect(record)">前往山野探索 <Icon name="arrow"></Icon></button></template>
+        </section>
+      </div>
+    </Transition>
+  </main>
+</div>
+<script src="./pages-runtime.js"></script>
+<script type="module" src="./src/app.js"></script>
+<script>setTimeout(()=>{if(document.querySelector('[v-cloak]')){const n=document.createElement('div');n.style='position:fixed;inset:0;display:grid;place-content:center;text-align:center;background:#ecebdc;color:#45533e;font:18px serif';n.innerHTML='<h1>山野来信</h1><p>页面资源尚未载入，请检查网络后刷新。</p>';document.body.append(n)}},25000);</script>
+</body>
+</html>
+
+
+
+
+
+
